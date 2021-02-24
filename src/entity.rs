@@ -1,7 +1,7 @@
 // other implementation is in `generated/entities.rs`
 
 use enum_primitive::FromPrimitive;
-use std::io::{Read, Write};
+use std::io::Write;
 
 use crate::{CodePair, Color, DxfError, DxfResult, Handle, Point, Vector};
 
@@ -407,10 +407,7 @@ impl Entity {
         self.common.normalize();
         // no entity-specific values to set
     }
-    pub(crate) fn read<I>(iter: &mut CodePairPutBack<I>) -> DxfResult<Option<Entity>>
-    where
-        I: Read,
-    {
+    pub(crate) fn read(iter: &mut CodePairPutBack) -> DxfResult<Option<Entity>> {
         'new_entity: loop {
             match iter.next() {
                 // first code pair must be 0/entity-type
@@ -673,14 +670,7 @@ impl Entity {
             }
         }
     }
-    fn apply_code_pair<I>(
-        &mut self,
-        pair: &CodePair,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<()>
-    where
-        I: Read,
-    {
+    fn apply_code_pair(&mut self, pair: &CodePair, iter: &mut CodePairPutBack) -> DxfResult<()> {
         if !self.specific.try_apply_code_pair(&pair)? {
             self.common.apply_individual_pair(&pair, iter)?;
         }
@@ -797,10 +787,7 @@ impl Entity {
 
         Ok(())
     }
-    fn apply_custom_reader<I>(&mut self, iter: &mut CodePairPutBack<I>) -> DxfResult<bool>
-    where
-        I: Read,
-    {
+    fn apply_custom_reader(&mut self, iter: &mut CodePairPutBack) -> DxfResult<bool> {
         match self.specific {
             EntityType::Attribute(ref mut att) => {
                 Entity::apply_custom_reader_attribute(&mut self.common, att, iter)
@@ -817,14 +804,11 @@ impl Entity {
             _ => Ok(false), // no custom reader
         }
     }
-    fn apply_custom_reader_attribute<I>(
+    fn apply_custom_reader_attribute(
         common: &mut EntityCommon,
         att: &mut Attribute,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<bool>
-    where
-        I: Read,
-    {
+        iter: &mut CodePairPutBack,
+    ) -> DxfResult<bool> {
         let xrecord_text = "AcDbXrecord";
         let mut last_subclass_marker = String::new();
         let mut is_version_set = false;
@@ -968,14 +952,11 @@ impl Entity {
             }
         }
     }
-    fn apply_custom_reader_attributedefinition<I>(
+    fn apply_custom_reader_attributedefinition(
         common: &mut EntityCommon,
         att: &mut AttributeDefinition,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<bool>
-    where
-        I: Read,
-    {
+        iter: &mut CodePairPutBack,
+    ) -> DxfResult<bool> {
         let xrecord_text = "AcDbXrecord";
         let mut last_subclass_marker = String::new();
         let mut is_version_set = false;
@@ -1122,14 +1103,11 @@ impl Entity {
             }
         }
     }
-    fn apply_custom_reader_lwpolyline<I>(
+    fn apply_custom_reader_lwpolyline(
         common: &mut EntityCommon,
         poly: &mut LwPolyline,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<bool>
-    where
-        I: Read,
-    {
+        iter: &mut CodePairPutBack,
+    ) -> DxfResult<bool> {
         loop {
             let pair = next_pair!(iter);
             match pair.code {
@@ -1179,14 +1157,11 @@ impl Entity {
             }
         }
     }
-    fn apply_custom_reader_mtext<I>(
+    fn apply_custom_reader_mtext(
         common: &mut EntityCommon,
         mtext: &mut MText,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<bool>
-    where
-        I: Read,
-    {
+        iter: &mut CodePairPutBack,
+    ) -> DxfResult<bool> {
         let mut reading_column_data = false;
         let mut read_column_count = false;
         loop {

@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::Write;
 
 use crate::{CodePair, DxfError, DxfResult, Handle, Point, Vector};
 
@@ -52,13 +52,10 @@ pub enum XDataItem {
 }
 
 impl XData {
-    pub(crate) fn read_item<I>(
+    pub(crate) fn read_item(
         application_name: String,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<XData>
-    where
-        I: Read,
-    {
+        iter: &mut CodePairPutBack,
+    ) -> DxfResult<XData> {
         let mut xdata = XData {
             application_name,
             items: vec![],
@@ -104,10 +101,7 @@ impl XData {
 }
 
 impl XDataItem {
-    fn read_item<I>(pair: &CodePair, iter: &mut CodePairPutBack<I>) -> DxfResult<XDataItem>
-    where
-        I: Read,
-    {
+    fn read_item(pair: &CodePair, iter: &mut CodePairPutBack) -> DxfResult<XDataItem> {
         match pair.code {
             XDATA_STRING => Ok(XDataItem::Str(pair.assert_string()?)),
             XDATA_CONTROLGROUP => {
@@ -168,10 +162,7 @@ impl XDataItem {
             _ => Err(DxfError::UnexpectedCode(pair.code, pair.offset)),
         }
     }
-    fn read_double<T>(iter: &mut CodePairPutBack<T>, expected_code: i32) -> DxfResult<f64>
-    where
-        T: Read,
-    {
+    fn read_double(iter: &mut CodePairPutBack, expected_code: i32) -> DxfResult<f64> {
         match iter.next() {
             Some(Ok(ref pair)) if pair.code == expected_code => Ok(pair.assert_f64()?),
             Some(Ok(pair)) => Err(DxfError::UnexpectedCode(pair.code, pair.offset)),
@@ -179,28 +170,18 @@ impl XDataItem {
             None => Err(DxfError::UnexpectedEndOfInput),
         }
     }
-    fn read_point<I>(
-        iter: &mut CodePairPutBack<I>,
-        first: f64,
-        expected_code: i32,
-    ) -> DxfResult<Point>
-    where
-        I: Read,
-    {
+    fn read_point(iter: &mut CodePairPutBack, first: f64, expected_code: i32) -> DxfResult<Point> {
         Ok(Point::new(
             first,
             XDataItem::read_double(iter, expected_code + 10)?,
             XDataItem::read_double(iter, expected_code + 20)?,
         ))
     }
-    fn read_vector<I>(
-        iter: &mut CodePairPutBack<I>,
+    fn read_vector(
+        iter: &mut CodePairPutBack,
         first: f64,
         expected_code: i32,
-    ) -> DxfResult<Vector>
-    where
-        I: Read,
-    {
+    ) -> DxfResult<Vector> {
         Ok(Vector::new(
             first,
             XDataItem::read_double(iter, expected_code + 10)?,

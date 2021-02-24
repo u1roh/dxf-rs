@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::Write;
 
 use crate::{CodePair, Drawing, DxfError, DxfResult};
 
@@ -118,13 +118,7 @@ impl Default for Class {
 
 // internal visibility only
 impl Class {
-    pub(crate) fn read_classes<I>(
-        drawing: &mut Drawing,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<()>
-    where
-        I: Read,
-    {
+    pub(crate) fn read_classes(drawing: &mut Drawing, iter: &mut CodePairPutBack) -> DxfResult<()> {
         loop {
             match iter.next() {
                 Some(Ok(pair)) => {
@@ -181,14 +175,7 @@ impl Class {
 
 // private implementation
 impl Class {
-    fn read_class<I>(
-        typ: &str,
-        drawing: &mut Drawing,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<()>
-    where
-        I: Read,
-    {
+    fn read_class(typ: &str, drawing: &mut Drawing, iter: &mut CodePairPutBack) -> DxfResult<()> {
         let mut class = Class::default();
 
         // R13 has alternate values for the code pairs

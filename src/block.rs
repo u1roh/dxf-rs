@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::Write;
 
 use crate::{
     CodePair, CodePairValue, Drawing, DrawingItem, DrawingItemMut, DxfError, DxfResult,
@@ -121,13 +121,7 @@ impl Default for Block {
 
 // internal visibility only
 impl Block {
-    pub(crate) fn read_block<I>(
-        drawing: &mut Drawing,
-        iter: &mut CodePairPutBack<I>,
-    ) -> DxfResult<()>
-    where
-        I: Read,
-    {
+    pub(crate) fn read_block(drawing: &mut Drawing, iter: &mut CodePairPutBack) -> DxfResult<()> {
         // match code pair:
         //   0/ENDBLK -> swallow code pairs and return
         //   0/* -> read entity and add to collection

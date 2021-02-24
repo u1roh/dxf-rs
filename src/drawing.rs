@@ -23,7 +23,7 @@ use crate::object_iter::ObjectIter;
 use crate::block::Block;
 use crate::class::Class;
 
-use crate::code_pair_iter::CodePairIter;
+use crate::code_pair_iter::{new_code_pair_iter_from_reader, CodePairIter};
 use crate::code_pair_writer::CodePairWriter;
 
 use crate::thumbnail;
@@ -104,9 +104,9 @@ impl Drawing {
         drawing
     }
     /// Loads a `Drawing` from anything that implements the `Read` trait.
-    pub fn load<T>(reader: &mut T) -> DxfResult<Drawing>
+    pub fn load<'a, T>(reader: &mut T) -> DxfResult<Drawing>
     where
-        T: Read + ?Sized,
+        T: Read + 'a + ?Sized,
     {
         Drawing::load_with_encoding(reader, encoding_rs::WINDOWS_1252)
     }
@@ -126,25 +126,29 @@ impl Drawing {
                 reader.load()
             }
             _ => {
-                let reader = CodePairIter::new(reader, encoding, first_line);
-                let mut drawing = Drawing::new();
-                drawing.clear();
-                let mut iter = CodePairPutBack::from_code_pair_iter(reader);
-                Drawing::read_sections(&mut drawing, &mut iter)?;
-                match iter.next() {
-                    Some(Ok(CodePair {
-                        code: 0,
-                        value: CodePairValue::Str(ref s),
-                        ..
-                    })) if s == "EOF" => Ok(drawing),
-                    Some(Ok(pair)) => Err(DxfError::UnexpectedCodePair(
-                        pair,
-                        String::from("expected 0/EOF"),
-                    )),
-                    Some(Err(e)) => Err(e),
-                    None => Ok(drawing),
-                }
+                let iter = new_code_pair_iter_from_reader(reader, encoding, first_line)?;
+                Drawing::load_from_iter(iter)
             }
+        }
+    }
+    /// Loads a `Drawing` from the specified `CodePairIter`.
+    pub(crate) fn load_from_iter(iter: Box<dyn CodePairIter>) -> DxfResult<Drawing> {
+        let mut drawing = Drawing::new();
+        drawing.clear();
+        let mut iter = CodePairPutBack::from_code_pair_iter(iter);
+        Drawing::read_sections(&mut drawing, &mut iter)?;
+        match iter.next() {
+            Some(Ok(CodePair {
+                code: 0,
+                value: CodePairValue::Str(ref s),
+                ..
+            })) if s == "EOF" => Ok(drawing),
+            Some(Ok(pair)) => Err(DxfError::UnexpectedCodePair(
+                pair,
+                String::from("expected 0/EOF"),
+            )),
+            Some(Err(e)) => Err(e),
+            None => Ok(drawing),
         }
     }
     /// Loads a `Drawing` from disk, using a `BufReader`.
@@ -973,10 +977,7 @@ impl Drawing {
         }
         Ok(())
     }
-    fn read_sections<T>(drawing: &mut Drawing, iter: &mut CodePairPutBack<T>) -> DxfResult<()>
-    where
-        T: Read,
-    {
+    fn read_sections(drawing: &mut Drawing, iter: &mut CodePairPutBack) -> DxfResult<()> {
         loop {
             match iter.next() {
                 Some(Ok(pair @ CodePair { code: 0, .. })) => match &*pair.assert_string()? {
@@ -1052,10 +1053,7 @@ impl Drawing {
 
         Ok(())
     }
-    fn swallow_section<T>(iter: &mut CodePairPutBack<T>) -> DxfResult<()>
-    where
-        T: Read,
-    {
+    fn swallow_section(iter: &mut CodePairPutBack) -> DxfResult<()> {
         loop {
             match iter.next() {
                 Some(Ok(pair)) => {
@@ -1071,10 +1069,7 @@ impl Drawing {
 
         Ok(())
     }
-    fn read_entities<T>(&mut self, iter: &mut CodePairPutBack<T>) -> DxfResult<()>
-    where
-        T: Read,
-    {
+    fn read_entities(&mut self, iter: &mut CodePairPutBack) -> DxfResult<()> {
         let mut iter = EntityIter { iter };
         let mut entities = vec![];
         iter.read_entities_into_vec(&mut entities)?;
@@ -1087,10 +1082,7 @@ impl Drawing {
         }
         Ok(())
     }
-    fn read_objects<T>(&mut self, iter: &mut CodePairPutBack<T>) -> DxfResult<()>
-    where
-        T: Read,
-    {
+    fn read_objects(&mut self, iter: &mut CodePairPutBack) -> DxfResult<()> {
         let iter = put_back(ObjectIter { iter });
         for o in iter {
             if o.common.handle.is_empty() {
@@ -1102,15 +1094,14 @@ impl Drawing {
 
         Ok(())
     }
-    fn read_section_item<I, F>(
+    fn read_section_item<F>(
         &mut self,
-        iter: &mut CodePairPutBack<I>,
+        iter: &mut CodePairPutBack,
         item_type: &str,
         callback: F,
     ) -> DxfResult<()>
     where
-        I: Read,
-        F: Fn(&mut Drawing, &mut CodePairPutBack<I>) -> DxfResult<()>,
+        F: Fn(&mut Drawing, &mut CodePairPutBack) -> DxfResult<()>,
     {
         loop {
             match iter.next() {
@@ -1140,10 +1131,7 @@ impl Drawing {
 
         Ok(())
     }
-    pub(crate) fn swallow_table<I>(iter: &mut CodePairPutBack<I>) -> DxfResult<()>
-    where
-        I: Read,
-    {
+    pub(crate) fn swallow_table(iter: &mut CodePairPutBack) -> DxfResult<()> {
         loop {
             match iter.next() {
                 Some(Ok(pair)) => {

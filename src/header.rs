@@ -1,6 +1,6 @@
 // other implementation is in `generated/header.rs`
 
-use std::io::{Read, Write};
+use std::io::Write;
 
 use crate::code_pair_put_back::CodePairPutBack;
 use crate::code_pair_writer::CodePairWriter;
@@ -21,10 +21,7 @@ impl Header {
         default_if_empty(&mut self.dimension_style_name, "STANDARD");
         default_if_empty(&mut self.file_name, ".");
     }
-    pub(crate) fn read<T>(iter: &mut CodePairPutBack<T>) -> DxfResult<Header>
-    where
-        T: Read,
-    {
+    pub(crate) fn read(iter: &mut CodePairPutBack) -> DxfResult<Header> {
         let mut header = Header::default();
         loop {
             match iter.next() {
@@ -90,59 +87,40 @@ mod tests {
 
     #[test]
     fn empty_header() {
-        let _file = parse_drawing(
-            vec!["0", "SECTION", "2", "HEADER", "0", "ENDSEC", "0", "EOF"]
-                .join("\n")
-                .as_str(),
-        );
+        let _file = drawing_from_pairs(vec![
+            CodePair::new_str(0, "SECTION"),
+            CodePair::new_str(2, "HEADER"),
+            CodePair::new_str(0, "ENDSEC"),
+            CodePair::new_str(0, "EOF"),
+        ]);
     }
 
     #[test]
     fn specific_header_values() {
-        let file = from_section(
+        let file = from_section_pairs(
             "HEADER",
-            "
-  9
-$ACADMAINTVER
- 70
-16
-  9
-$ACADVER
-  1
-AC1012
-  9
-$ANGBASE
- 50
-5.5E1
-  9
-$ANGDIR
- 70
-1
-  9
-$ATTMODE
- 70
-1
-  9
-$AUNITS
- 70
-3
-  9
-$AUPREC
- 70
-7
-  9
-$CLAYER
-  8
-<current layer>
-  9
-$LUNITS
- 70
-6
-  9
-$LUPREC
- 70
-7"
-            .trim_start(),
+            vec![
+                CodePair::new_str(9, "$ACADMAINTVER"),
+                CodePair::new_i16(70, 16),
+                CodePair::new_str(9, "$ACADVER"),
+                CodePair::new_str(1, "AC1012"),
+                CodePair::new_str(9, "$ANGBASE"),
+                CodePair::new_f64(50, 55.0),
+                CodePair::new_str(9, "$ANGDIR"),
+                CodePair::new_i16(70, 1),
+                CodePair::new_str(9, "$ATTMODE"),
+                CodePair::new_i16(70, 1),
+                CodePair::new_str(9, "$AUNITS"),
+                CodePair::new_i16(70, 3),
+                CodePair::new_str(9, "$AUPREC"),
+                CodePair::new_i16(70, 7),
+                CodePair::new_str(9, "$CLAYER"),
+                CodePair::new_str(8, "<current layer>"),
+                CodePair::new_str(9, "$LUNITS"),
+                CodePair::new_i16(70, 6),
+                CodePair::new_str(9, "$LUPREC"),
+                CodePair::new_i16(70, 7),
+            ],
         );
         assert_eq!(16, file.header.maintenance_version);
         assert_eq!(AcadVersion::R13, file.header.version);
