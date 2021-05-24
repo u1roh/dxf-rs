@@ -516,7 +516,7 @@ fn parse_hex_string_test() {
 #[cfg(test)]
 #[allow(dead_code)]
 pub mod tests {
-    use crate::code_pair_iter::DirectCodePairIter;
+    use crate::code_pair_iter::{CodePairIter, DirectCodePairIter};
     use crate::*;
     use std::io::{BufRead, BufReader, Cursor, Seek, SeekFrom};
 
@@ -529,7 +529,7 @@ pub mod tests {
 
     pub fn drawing_from_pairs(pairs: Vec<CodePair>) -> Drawing {
         let iter = DirectCodePairIter::new(pairs);
-        let iter = Box::new(iter);
+        let iter: Box<dyn CodePairIter> = Box::new(iter);
         unwrap_drawing(Drawing::load_from_iter(iter))
     }
 

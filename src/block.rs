@@ -121,7 +121,10 @@ impl Default for Block {
 
 // internal visibility only
 impl Block {
-    pub(crate) fn read_block(drawing: &mut Drawing, iter: &mut CodePairPutBack) -> DxfResult<()> {
+    pub(crate) fn read_block<'a>(
+        drawing: &mut Drawing,
+        iter: &'a mut CodePairPutBack<'a>,
+    ) -> DxfResult<()> {
         // match code pair:
         //   0/ENDBLK -> swallow code pairs and return
         //   0/* -> read entity and add to collection

@@ -6,14 +6,19 @@ use crate::DxfResult;
 use itertools::{put_back, PutBack};
 
 pub(crate) struct EntityIter<'a> {
-    pub iter: &'a mut CodePairPutBack,
+    pub iter: &'a mut CodePairPutBack<'a>,
 }
 
-impl<'a> Iterator for EntityIter<'a> {
+impl<'a, 'b> Iterator for EntityIter<'a> {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Entity> {
-        match Entity::read(self.iter) {
+        let entity = {
+            let iter = self.iter;
+            let e = Entity::read(self.iter);
+            e
+        };
+        match entity {
             Ok(Some(e)) => Some(e),
             Ok(None) | Err(_) => None,
         }
@@ -26,9 +31,9 @@ impl<'a> EntityIter<'a> {
     }
 }
 
-pub(crate) fn collect_entities<I>(iter: &mut I, entities: &mut Vec<Entity>) -> DxfResult<()>
+pub(crate) fn collect_entities<'a, I>(iter: &'a mut I, entities: &mut Vec<Entity>) -> DxfResult<()>
 where
-    I: Iterator<Item = Entity>,
+    I: Iterator<Item = Entity> + 'a,
 {
     fn swallow_seqend<I>(iter: &mut PutBack<I>) -> DxfResult<()>
     where

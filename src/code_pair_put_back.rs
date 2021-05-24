@@ -2,13 +2,13 @@ use crate::code_pair_iter::CodePairIter;
 use crate::dxf_result::DxfResult;
 use crate::CodePair;
 
-pub(crate) struct CodePairPutBack {
+pub(crate) struct CodePairPutBack<'a> {
     top: Vec<DxfResult<CodePair>>,
-    iter: Box<dyn CodePairIter>,
+    iter: Box<dyn CodePairIter + 'a>,
 }
 
-impl CodePairPutBack {
-    pub fn from_code_pair_iter(iter: Box<dyn CodePairIter>) -> Self {
+impl<'a> CodePairPutBack<'a> {
+    pub fn from_code_pair_iter(iter: Box<dyn CodePairIter + 'a>) -> Self {
         CodePairPutBack { top: vec![], iter }
     }
     pub fn put_back(&mut self, item: DxfResult<CodePair>) {
@@ -19,7 +19,7 @@ impl CodePairPutBack {
     }
 }
 
-impl Iterator for CodePairPutBack {
+impl<'a> Iterator for CodePairPutBack<'a> {
     type Item = DxfResult<CodePair>;
 
     fn next(&mut self) -> Option<DxfResult<CodePair>> {

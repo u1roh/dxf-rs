@@ -174,7 +174,7 @@ impl<T: Read> Iterator for BinaryCodePairIter<T> {
     }
 }
 
-impl<T: Read> BinaryCodePairIter<T> {
+impl<'a, T: Read + 'a> BinaryCodePairIter<T> {
     pub fn new(reader: T, offset: usize) -> Self {
         BinaryCodePairIter {
             reader,
@@ -288,12 +288,12 @@ impl<T: Read> BinaryCodePairIter<T> {
 //---------------------------
 
 pub(crate) fn new_code_pair_iter_from_reader<'a, T>(
-    mut reader: T,
+    reader: &'a mut T,
     string_encoding: &'static Encoding,
     first_line: String,
 ) -> DxfResult<Box<dyn CodePairIter + 'a>>
 where
-    T: Read + 'a,
+    T: Read + ?Sized + 'a,
 {
     let iter: Box<dyn CodePairIter> = match &*first_line {
         "AutoCAD Binary DXF" => {
@@ -316,6 +316,7 @@ where
             first_line,
             1,
         )),
+        //_ => panic!("TODO"),
     };
     Ok(iter)
 }
