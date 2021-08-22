@@ -64,6 +64,74 @@ impl DimensionBase {
         }
         val
     }
+    fn apply_dimension_code_pair(&mut self, pair: &CodePair) -> DxfResult<bool> {
+        match pair.code {
+            1 => {
+                self.text = pair.assert_string()?;
+            }
+            2 => {
+                self.block_name = pair.assert_string()?;
+            }
+            3 => {
+                self.dimension_style_name = pair.assert_string()?;
+            }
+            10 => {
+                self.definition_point_1.x = pair.assert_f64()?;
+            }
+            20 => {
+                self.definition_point_1.y = pair.assert_f64()?;
+            }
+            30 => {
+                self.definition_point_1.z = pair.assert_f64()?;
+            }
+            11 => {
+                self.text_mid_point.x = pair.assert_f64()?;
+            }
+            21 => {
+                self.text_mid_point.y = pair.assert_f64()?;
+            }
+            31 => {
+                self.text_mid_point.z = pair.assert_f64()?;
+            }
+            41 => {
+                self.text_line_spacing_factor = pair.assert_f64()?;
+            }
+            42 => {
+                self.actual_measurement = pair.assert_f64()?;
+            }
+            51 => {
+                self.horizontal_direction_angle = pair.assert_f64()?;
+            }
+            53 => {
+                self.text_rotation_angle = pair.assert_f64()?;
+            }
+            70 => {
+                self.set_dimension_type(pair.assert_i16()?)?;
+            }
+            71 => {
+                self.attachment_point =
+                    enum_from_number!(AttachmentPoint, TopLeft, from_i16, pair.assert_i16()?);
+            }
+            72 => {
+                self.text_line_spacing_style =
+                    enum_from_number!(TextLineSpacingStyle, AtLeast, from_i16, pair.assert_i16()?);
+            }
+            210 => {
+                self.normal.x = pair.assert_f64()?;
+            }
+            220 => {
+                self.normal.y = pair.assert_f64()?;
+            }
+            230 => {
+                self.normal.z = pair.assert_f64()?;
+            }
+            280 => {
+                self.version = enum_from_number!(Version, R2010, from_i16, pair.assert_i16()?);
+            }
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -272,7 +340,7 @@ impl EntityType {
                     dim.extension_line_angle = pair.assert_f64()?;
                 }
                 _ => {
-                    return Ok(false);
+                    return dim.dimension_base.apply_dimension_code_pair(pair);
                 }
             },
             EntityType::RadialDimension(ref mut dim) => match pair.code {
@@ -289,7 +357,7 @@ impl EntityType {
                     dim.leader_length = pair.assert_f64()?;
                 }
                 _ => {
-                    return Ok(false);
+                    return dim.dimension_base.apply_dimension_code_pair(pair);
                 }
             },
             EntityType::DiameterDimension(ref mut dim) => match pair.code {
@@ -306,7 +374,7 @@ impl EntityType {
                     dim.leader_length = pair.assert_f64()?;
                 }
                 _ => {
-                    return Ok(false);
+                    return dim.dimension_base.apply_dimension_code_pair(pair);
                 }
             },
             EntityType::AngularThreePointDimension(ref mut dim) => match pair.code {
@@ -347,7 +415,7 @@ impl EntityType {
                     dim.definition_point_5.z = pair.assert_f64()?;
                 }
                 _ => {
-                    return Ok(false);
+                    return dim.dimension_base.apply_dimension_code_pair(pair);
                 }
             },
             EntityType::OrdinateDimension(ref mut dim) => match pair.code {
@@ -370,7 +438,7 @@ impl EntityType {
                     dim.definition_point_3.z = pair.assert_f64()?;
                 }
                 _ => {
-                    return Ok(false);
+                    return dim.dimension_base.apply_dimension_code_pair(pair);
                 }
             },
             _ => {
@@ -411,7 +479,7 @@ impl Entity {
     where
         I: Read,
     {
-        'new_entity: loop {
+        loop {
             match iter.next() {
                 // first code pair must be 0/entity-type
                 Some(Ok(pair @ CodePair { code: 0, .. })) => {
