@@ -425,8 +425,7 @@ impl Entity {
                         "DIMENSION" => {
                             // dimensions require special handling
                             let mut common = EntityCommon::default();
-                            let mut dimension_entity: Option<EntityType> = None;
-                            let mut dimension_base = DimensionBase::default();
+                            let mut dim = EntityType::RotatedDimension(Default::default());
                             loop {
                                 match iter.next() {
                                     Some(Ok(pair @ CodePair { code: 0, .. })) => {
@@ -435,187 +434,72 @@ impl Entity {
                                         break;
                                     }
                                     Some(Ok(pair)) => {
-                                        match dimension_entity {
-                                            Some(ref mut dim) => {
-                                                if !dim.apply_dimension_code_pair(&pair)? {
-                                                    common.apply_individual_pair(&pair, iter)?;
+                                        if pair.code == 100 {
+                                            let base = match &dim {
+                                                EntityType::RotatedDimension(dim) => {
+                                                    &dim.dimension_base
                                                 }
-                                            }
-                                            None => {
-                                                match pair.code {
-                                                    1 => {
-                                                        dimension_base.text =
-                                                            pair.assert_string()?;
-                                                    }
-                                                    2 => {
-                                                        dimension_base.block_name =
-                                                            pair.assert_string()?;
-                                                    }
-                                                    3 => {
-                                                        dimension_base.dimension_style_name =
-                                                            pair.assert_string()?;
-                                                    }
-                                                    10 => {
-                                                        dimension_base.definition_point_1.x =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    20 => {
-                                                        dimension_base.definition_point_1.y =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    30 => {
-                                                        dimension_base.definition_point_1.z =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    11 => {
-                                                        dimension_base.text_mid_point.x =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    21 => {
-                                                        dimension_base.text_mid_point.y =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    31 => {
-                                                        dimension_base.text_mid_point.z =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    41 => {
-                                                        dimension_base.text_line_spacing_factor =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    42 => {
-                                                        dimension_base.actual_measurement =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    51 => {
-                                                        dimension_base.horizontal_direction_angle =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    53 => {
-                                                        dimension_base.text_rotation_angle =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    70 => {
-                                                        dimension_base.set_dimension_type(
-                                                            pair.assert_i16()?,
-                                                        )?;
-                                                    }
-                                                    71 => {
-                                                        dimension_base.attachment_point = enum_from_number!(
-                                                            AttachmentPoint,
-                                                            TopLeft,
-                                                            from_i16,
-                                                            pair.assert_i16()?
-                                                        );
-                                                    }
-                                                    72 => {
-                                                        dimension_base.text_line_spacing_style = enum_from_number!(
-                                                            TextLineSpacingStyle,
-                                                            AtLeast,
-                                                            from_i16,
-                                                            pair.assert_i16()?
-                                                        );
-                                                    }
-                                                    210 => {
-                                                        dimension_base.normal.x =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    220 => {
-                                                        dimension_base.normal.y =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    230 => {
-                                                        dimension_base.normal.z =
-                                                            pair.assert_f64()?;
-                                                    }
-                                                    280 => {
-                                                        dimension_base.version = enum_from_number!(
-                                                            Version,
-                                                            R2010,
-                                                            from_i16,
-                                                            pair.assert_i16()?
-                                                        );
-                                                    }
-                                                    100 => {
-                                                        match &*pair.assert_string()? {
-                                                            "AcDbAlignedDimension" => {
-                                                                dimension_entity = Some(
-                                                                    EntityType::RotatedDimension(
-                                                                        RotatedDimension {
-                                                                            dimension_base:
-                                                                                dimension_base
-                                                                                    .clone(),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                );
-                                                            }
-                                                            "AcDbRadialDimension" => {
-                                                                dimension_entity = Some(
-                                                                    EntityType::RadialDimension(
-                                                                        RadialDimension {
-                                                                            dimension_base:
-                                                                                dimension_base
-                                                                                    .clone(),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                );
-                                                            }
-                                                            "AcDbDiametricDimension" => {
-                                                                dimension_entity = Some(
-                                                                    EntityType::DiameterDimension(
-                                                                        DiameterDimension {
-                                                                            dimension_base:
-                                                                                dimension_base
-                                                                                    .clone(),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                );
-                                                            }
-                                                            "AcDb3PointAngularDimension" => {
-                                                                dimension_entity = Some(EntityType::AngularThreePointDimension(AngularThreePointDimension { dimension_base: dimension_base.clone(), .. Default::default() }));
-                                                            }
-                                                            "AcDbOrdinateDimension" => {
-                                                                dimension_entity = Some(
-                                                                    EntityType::OrdinateDimension(
-                                                                        OrdinateDimension {
-                                                                            dimension_base:
-                                                                                dimension_base
-                                                                                    .clone(),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                );
-                                                            }
-                                                            _ => {} // unexpected dimension type
-                                                        }
-                                                    }
-                                                    _ => {
-                                                        common
-                                                            .apply_individual_pair(&pair, iter)?;
-                                                    }
+                                                EntityType::RadialDimension(dim) => {
+                                                    &dim.dimension_base
                                                 }
+                                                EntityType::DiameterDimension(dim) => {
+                                                    &dim.dimension_base
+                                                }
+                                                EntityType::AngularThreePointDimension(dim) => {
+                                                    &dim.dimension_base
+                                                }
+                                                EntityType::OrdinateDimension(dim) => {
+                                                    &dim.dimension_base
+                                                }
+                                                _ => unreachable!(),
+                                            };
+                                            match &*pair.assert_string()? {
+                                                "AcDbRadialDimension" => {
+                                                    dim = EntityType::RadialDimension(
+                                                        RadialDimension {
+                                                            dimension_base: base.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                }
+                                                "AcDbDiametricDimension" => {
+                                                    dim = EntityType::DiameterDimension(
+                                                        DiameterDimension {
+                                                            dimension_base: base.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                }
+                                                "AcDb3PointAngularDimension" => {
+                                                    dim = EntityType::AngularThreePointDimension(
+                                                        AngularThreePointDimension {
+                                                            dimension_base: base.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                }
+                                                "AcDbOrdinateDimension" => {
+                                                    dim = EntityType::OrdinateDimension(
+                                                        OrdinateDimension {
+                                                            dimension_base: base.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                }
+                                                _ => {} // unexpected dimension type
                                             }
+                                        } else if !dim.apply_dimension_code_pair(&pair)? {
+                                            common.apply_individual_pair(&pair, iter)?;
                                         }
                                     }
                                     Some(Err(e)) => return Err(e),
                                     None => return Err(DxfError::UnexpectedEndOfInput),
                                 }
                             }
-
-                            match dimension_entity {
-                                Some(dim) => {
-                                    return Ok(Some(Entity {
-                                        common,
-                                        specific: dim,
-                                    }));
-                                }
-                                None => {
-                                    continue 'new_entity;
-                                } // unsuccessful dimension match
-                            }
+                            return Ok(Some(Entity {
+                                common,
+                                specific: dim,
+                            }));
                         }
                         _ => {
                             match EntityType::from_type_string(&type_string) {
